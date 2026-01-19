@@ -75,3 +75,6 @@ secrets/
 
 # Original guide (kept locally for reference)
 intel_arc_b_50_local_llm_stack_illama_open_web_ui_open_vino_shareable_guide.md
+
+# Local deployment notes (server-specific, not for repo)
+local-maks-rebuild.md
