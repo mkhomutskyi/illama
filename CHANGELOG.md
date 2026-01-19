@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-01-19
+
 ### Added
 
 - **Auto-discovery of model folders**: When `index.json` is missing, the registry automatically scans for model folders and creates the index file
@@ -17,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `eval_duration` - generation time in nanoseconds
   - `total_duration` - total request time in nanoseconds
   - `tokens_per_second` - calculated TPS
+
+- **CLI verbose mode** (`-v` / `--verbose`)
+  - Shows performance metrics after response
+  - Displays TPS, token counts, and generation duration
 
 ### Fixed
 
@@ -89,5 +95,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Vision-Language Models (VLMs) require additional setup
 - Some HuggingFace models are gated and require acceptance (Llama, Gemma, Codestral)
 
-[Unreleased]: https://github.com/mkhomutskyi/illama/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/mkhomutskyi/illama/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mkhomutskyi/illama/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mkhomutskyi/illama/releases/tag/v0.1.0

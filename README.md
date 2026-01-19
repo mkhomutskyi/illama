@@ -136,6 +136,7 @@ huggingface-cli login
 | `illama list` | List registered models |
 | `illama ps` | Show loaded model status |
 | `illama run <model> [prompt]` | Chat with a model |
+| `illama run <model> -v` | Chat with performance metrics |
 | `illama serve` | Start the API server |
 | `illama doctor` | System diagnostics |
 
@@ -158,6 +159,11 @@ illama run Phi-4-mini-reasoning
 
 # Single prompt
 illama run Qwen3-8B "Explain quantum computing"
+
+# With performance metrics (non-streaming)
+illama run Qwen3-8B "Hello" -v
+# Output: Hello! How can I help you?
+# eval: 42 tokens | prompt: 10 | 28.50 t/s | gen: 1.47s
 ```
 
 ### API Server
