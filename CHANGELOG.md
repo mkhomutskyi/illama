@@ -89,5 +89,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Vision-Language Models (VLMs) require additional setup
 - Some HuggingFace models are gated and require acceptance (Llama, Gemma, Codestral)
 
-[Unreleased]: https://github.com/your-org/illama/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/your-org/illama/releases/tag/v0.1.0
+[Unreleased]: https://github.com/mkhomutskyi/illama/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mkhomutskyi/illama/releases/tag/v0.1.0

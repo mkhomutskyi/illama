@@ -44,7 +44,7 @@ Please be respectful and constructive in all interactions. We aim to maintain a 
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-org/illama.git
+git clone https://github.com/mkhomutskyi/illama.git
 cd illama
 
 # Create virtual environment

@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   illama-manager:
-    image: ghcr.io/your-org/illama-manager:latest
+    image: ghcr.io/mkhomutskyi/illama-manager:latest
     container_name: illama-manager
     restart: unless-stopped
     environment:
@@ -24,7 +24,7 @@ services:
     volumes:
       - /opt/illama:/data
     ports:
-      - "11434:11434"   # illama OpenAI-compatible API
+      - "11434:11434" # illama OpenAI-compatible API
     # Intel GPU passthrough
     devices:
       - /dev/dri:/dev/dri
