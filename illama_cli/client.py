@@ -76,6 +76,33 @@ class IllamaClient:
             data = resp.json()
             return data["choices"][0]["message"]["content"]
 
+    def chat_with_metrics(
+        self,
+        model: str,
+        messages: list[dict[str, str]],
+        max_tokens: int = 512,
+        temperature: float = 0.7,
+    ) -> dict[str, Any]:
+        """Send a chat completion request and return full response with metrics.
+        
+        Returns the complete API response including:
+        - choices[0].message.content
+        - usage (prompt_tokens, completion_tokens, total_tokens)
+        - eval_count, eval_duration, tokens_per_second, total_duration
+        """
+        payload = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "stream": False,  # Metrics only available in non-streaming mode
+        }
+        resp = self.session.post(
+            f"{self.base_url}/v1/chat/completions", json=payload
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     def _stream_chat(self, payload: dict[str, Any]) -> Iterator[str]:
         """Stream chat response."""
         with self.session.post(

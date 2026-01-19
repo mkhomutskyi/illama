@@ -245,8 +245,9 @@ def ps(ctx):
 @click.argument("prompt", required=False)
 @click.option("--max-tokens", default=4096, type=int)
 @click.option("--temperature", default=0.7, type=float)
+@click.option("--show-metrics", is_flag=True, help="Show performance metrics (TPS, duration)")
 @click.pass_context
-def run(ctx, model, prompt, max_tokens, temperature):
+def run(ctx, model, prompt, max_tokens, temperature, show_metrics):
     """Ensure model loaded, then run a prompt."""
     client = ctx.obj["client"]
 
@@ -262,6 +263,48 @@ def run(ctx, model, prompt, max_tokens, temperature):
                 break
 
             try:
+                if show_metrics:
+                    # Non-streaming with metrics
+                    response = client.chat_with_metrics(
+                        model=model,
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                    )
+                    content = response["choices"][0]["message"]["content"]
+                    click.echo(content)
+                    _print_metrics(response)
+                else:
+                    # Streaming (no metrics)
+                    response = client.chat(
+                        model=model,
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                        stream=True,
+                    )
+                    for token in response:
+                        click.echo(token, nl=False)
+                    click.echo()
+            except Exception as e:
+                click.echo(f"Error: {e}", err=True)
+    else:
+        # Single prompt mode
+        try:
+            if show_metrics:
+                # Non-streaming with metrics
+                response = client.chat_with_metrics(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+                content = response["choices"][0]["message"]["content"]
+                click.echo(content)
+                click.echo()
+                _print_metrics(response)
+            else:
+                # Streaming (no metrics)
                 response = client.chat(
                     model=model,
                     messages=[{"role": "user", "content": prompt}],
@@ -272,24 +315,31 @@ def run(ctx, model, prompt, max_tokens, temperature):
                 for token in response:
                     click.echo(token, nl=False)
                 click.echo()
-            except Exception as e:
-                click.echo(f"Error: {e}", err=True)
-    else:
-        # Single prompt mode
-        try:
-            response = client.chat(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=max_tokens,
-                temperature=temperature,
-                stream=True,
-            )
-            for token in response:
-                click.echo(token, nl=False)
-            click.echo()
         except Exception as e:
             click.echo(f"Error: {e}", err=True)
             sys.exit(1)
+
+
+def _print_metrics(response: dict) -> None:
+    """Print Ollama-style performance metrics."""
+    tps = response.get("tokens_per_second", 0)
+    eval_count = response.get("eval_count", 0)
+    prompt_count = response.get("prompt_eval_count", 0)
+    eval_duration = response.get("eval_duration", 0)
+    total_duration = response.get("total_duration", 0)
+    
+    # Convert nanoseconds to seconds
+    eval_sec = eval_duration / 1e9 if eval_duration else 0
+    total_sec = total_duration / 1e9 if total_duration else 0
+    
+    click.secho(
+        f"eval: {eval_count} tokens | "
+        f"prompt: {prompt_count} tokens | "
+        f"{tps:.2f} t/s | "
+        f"gen: {eval_sec:.2f}s | "
+        f"total: {total_sec:.2f}s",
+        dim=True
+    )
 
 
 @cli.command()
