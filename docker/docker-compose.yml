@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  illama-manager:
+    image: ghcr.io/your-org/illama-manager:latest
+    container_name: illama-manager
+    restart: unless-stopped
+    environment:
+      # OpenVINO / device
+      - ILLAMA_DEVICE=GPU
+      - ILLAMA_ONE_MODEL=1
+      - ILLAMA_IDLE_TTL_SEC=600
+
+      # Paths
+      - ILLAMA_REGISTRY_DIR=/data/registry
+      - ILLAMA_CACHE_DIR=/data/cache
+
+      # HF auth (set in .env or Portainer environment)
+      - HF_TOKEN=${HF_TOKEN}
+
+      # Optional perf knobs
+      - OMP_NUM_THREADS=8
+
+    volumes:
+      - /opt/illama:/data
+    ports:
+      - "11434:11434"   # illama OpenAI-compatible API
+    # Intel GPU passthrough
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - render
+      - video
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: openwebui
+    restart: unless-stopped
+    environment:
+      # Point OpenWebUI to illama-manager (OpenAI-compatible)
+      - OPENAI_API_BASE_URL=http://illama-manager:11434/v1
+      - OPENAI_API_KEY=not-needed
+    volumes:
+      - /opt/openwebui:/app/backend/data
+    ports:
+      - "3000:8080"
+    depends_on:
+      - illama-manager
+
+# Optional services (uncomment as needed)
+#
+#  redis:
+#    image: redis:alpine
+#    container_name: illama-redis
+#    restart: unless-stopped
+#    volumes:
+#      - /opt/illama/redis:/data
+#
+#  watchtower:
+#    image: containrrr/watchtower
+#    container_name: watchtower
+#    restart: unless-stopped
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock
+#    environment:
+#      - WATCHTOWER_CLEANUP=true
+#      - WATCHTOWER_POLL_INTERVAL=86400

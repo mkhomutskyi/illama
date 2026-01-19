@@ -1,0 +1,24 @@
+# Development overrides for docker-compose.yml
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: "3.9"
+
+services:
+  illama-manager:
+    # Use local build instead of registry image
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: illama-manager:dev
+    environment:
+      - ILLAMA_LOG_LEVEL=DEBUG
+      - ILLAMA_IDLE_TTL_SEC=60 # Shorter TTL for testing
+    volumes:
+      # Mount source for live reload (if using uvicorn --reload)
+      - ../illama_manager:/app/illama_manager:ro
+      # Local data directory
+      - ./dev-data:/data
+
+  openwebui:
+    ports:
+      - "3000:8080"
