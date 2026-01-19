@@ -33,7 +33,7 @@ OLLAMA_TO_HF = {
     "qwen3-vl:8b": "Qwen/Qwen3-VL-8B-Instruct",
 
     "deepseek-coder:6.7b": "deepseek-ai/deepseek-coder-6.7b-instruct",
-    "deepseek-coder-v2:16b": "deepseek-ai/DeepSeek-Coder-V2-Instruct",
+    "deepseek-coder-v2:16b": "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
     "deepseek-r1:14b": "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
     "deepseek-r1:32b": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
 
@@ -51,6 +51,9 @@ OLLAMA_TO_HF = {
     "granite-code:20b": "ibm-granite/granite-20b-code-instruct-8k",
 
     "rnj-1:8b": "EssentialAI/rnj-1-instruct",
+
+    # OpenAI GPT-OSS
+    "gpt-oss:20b": "openai/gpt-oss-20b",
 }
 
 EMBEDDING_KEYWORDS = ("embed", "embedding", "paraphrase-")

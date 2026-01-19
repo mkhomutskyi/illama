@@ -72,7 +72,7 @@ illama serve
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/illama.git
+git clone https://github.com/mkhomutskyi/illama.git
 cd illama
 
 # Create virtual environment
@@ -84,6 +84,35 @@ pip install -e .
 
 # For development
 pip install -e ".[dev]"
+```
+
+### System-wide Installation (Optional)
+
+**Option A: Symlink (recommended for development)**
+```bash
+# After pip install, create symlink to the venv's illama
+sudo ln -s $(pwd)/venv/bin/illama /usr/local/bin/illama
+```
+
+**Option B: Standalone binary with PyInstaller**
+```bash
+# Install PyInstaller
+pip install pyinstaller
+
+# Build standalone binary
+pyinstaller --onefile --name illama illama_cli/__main__.py
+
+# Install to system
+sudo mv dist/illama /usr/local/bin/
+sudo chmod +x /usr/local/bin/illama
+
+# Verify
+illama --version
+```
+
+**Option C: pip install globally** (not recommended - may conflict with system packages)
+```bash
+sudo pip install .
 ```
 
 ### Configure HuggingFace Token

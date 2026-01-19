@@ -25,6 +25,28 @@ class LoadedModel:
     last_request: float
 
 
+@dataclass
+class GenerationResult:
+    """Result of text generation with performance metrics."""
+
+    text: str
+    eval_count: int  # tokens generated
+    prompt_eval_count: int  # tokens in prompt (estimated)
+    eval_duration_ns: int  # generation time in nanoseconds
+    total_duration_ns: int  # total request time in nanoseconds
+    tokens_per_second: float  # calculated TPS
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for API response."""
+        return {
+            "eval_count": self.eval_count,
+            "prompt_eval_count": self.prompt_eval_count,
+            "eval_duration": self.eval_duration_ns,
+            "total_duration": self.total_duration_ns,
+            "tokens_per_second": round(self.tokens_per_second, 2),
+        }
+
+
 class ModelLoader:
     """Manages model loading, unloading, and inference.
 
@@ -156,8 +178,14 @@ class ModelLoader:
         max_tokens: int = 512,
         temperature: float = 0.7,
         stream: bool = False,
-    ) -> str | Iterator[str]:
-        """Generate text using the specified model."""
+    ) -> GenerationResult | Iterator[str]:
+        """Generate text using the specified model.
+        
+        Returns:
+            GenerationResult with metrics for non-streaming mode
+            Iterator[str] for streaming mode (metrics not available during stream)
+        """
+        start_time = time.time_ns()
         loaded = self.ensure_loaded(model_name)
 
         with self._lock:
@@ -171,15 +199,76 @@ class ModelLoader:
         if stream:
             return self._stream_generate(loaded, prompt, config)
         else:
-            return loaded.pipe.generate(prompt, config)
+            # Non-streaming with metrics
+            gen_start_time = time.time_ns()
+            output = loaded.pipe.generate(prompt, config)
+            gen_end_time = time.time_ns()
+            
+            # Calculate metrics
+            eval_duration_ns = gen_end_time - gen_start_time
+            total_duration_ns = gen_end_time - start_time
+            
+            # Estimate token counts (simple word-based approximation)
+            # TODO: Use tokenizer for accurate count if available
+            prompt_tokens = len(prompt.split())
+            output_tokens = len(output.split())
+            
+            # Try to get perf metrics from OpenVINO if available
+            try:
+                perf_metrics = loaded.pipe.get_perf_metrics()
+                if hasattr(perf_metrics, 'get_num_generated_tokens'):
+                    output_tokens = perf_metrics.get_num_generated_tokens()
+                if hasattr(perf_metrics, 'get_num_input_tokens'):
+                    prompt_tokens = perf_metrics.get_num_input_tokens()
+            except Exception:
+                pass  # Use word-based estimation
+            
+            # Calculate tokens per second
+            eval_duration_sec = eval_duration_ns / 1e9
+            tps = output_tokens / eval_duration_sec if eval_duration_sec > 0 else 0.0
+            
+            return GenerationResult(
+                text=output,
+                eval_count=output_tokens,
+                prompt_eval_count=prompt_tokens,
+                eval_duration_ns=eval_duration_ns,
+                total_duration_ns=total_duration_ns,
+                tokens_per_second=tps,
+            )
 
     def _stream_generate(
         self, loaded: LoadedModel, prompt: str, config: Any
     ) -> Iterator[str]:
-        """Stream generation token by token."""
-        # OpenVINO GenAI streaming interface
-        streamer = loaded.pipe.generate(prompt, config, streamer=True)
-        for token in streamer:
+        """Stream generation token by token using OpenVINO GenAI streamer."""
+        import queue
+        import threading
+        
+        # Use a queue to pass tokens from callback to iterator
+        token_queue: queue.Queue[str | None] = queue.Queue()
+        
+        # Define streamer callback function
+        def streamer_callback(token: str) -> bool:
+            """Called for each generated token. Return False to stop generation."""
+            token_queue.put(token)
+            return False  # Continue generation
+        
+        # Run generation in a thread so we can yield tokens
+        def run_generation():
+            try:
+                loaded.pipe.generate(prompt, config, streamer_callback)
+            except Exception as e:
+                logger.exception("Generation error in stream")
+            finally:
+                token_queue.put(None)  # Signal completion
+        
+        gen_thread = threading.Thread(target=run_generation, daemon=True)
+        gen_thread.start()
+        
+        # Yield tokens as they arrive
+        while True:
+            token = token_queue.get()
+            if token is None:
+                break
             yield token
 
     def shutdown(self) -> None:

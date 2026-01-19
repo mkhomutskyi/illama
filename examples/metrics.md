@@ -1,6 +1,6 @@
 # Example: Ollama Metrics Table
 
-This is an example metrics table that can be used with `illama_sync_from_metrics.py`.
+This is an example metrics table that can be used with `illama_sync_from_metrics.py`. This metrics been collected with ollama0.13.5 + IPEX 2.3.0 + Ubuntu 24.04 + Intel Arc B50 16GB
 
 | Model | Status | Speed | GPU Usage | Notes |
 |-------|--------|-------|-----------|-------|

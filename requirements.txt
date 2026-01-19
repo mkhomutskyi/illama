@@ -5,11 +5,20 @@ pydantic>=2.0.0
 click>=8.0.0
 requests>=2.28.0
 
-# OpenVINO
-openvino>=2024.0.0
-openvino-genai>=2024.0.0
-
-# Model conversion
-optimum[openvino]>=1.16.0
+# HuggingFace
 huggingface-hub>=0.20.0
 transformers>=4.36.0
+
+# OpenVINO (pinned to latest working versions)
+openvino>=2025.4.1
+openvino-genai>=2025.4.1.0
+
+# Model conversion
+optimum-intel>=1.16.0
+optimum>=1.16.0
+nncf>=2.7.0
+accelerate>=0.25.0
+
+# Required for gpt-oss and some models
+kernels
+triton==3.4

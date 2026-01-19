@@ -38,11 +38,12 @@ dependencies = [
     "pydantic>=2.0.0",
     "click>=8.0.0",
     "requests>=2.28.0",
-    "openvino>=2024.0.0",
-    "openvino-genai>=2024.0.0",
-    "optimum[openvino]>=1.16.0",
+    "openvino==2025.4.1",
+    "openvino-genai==2025.4.1.0",
+    "optimum-intel>=1.16.0",
     "huggingface-hub>=0.20.0",
     "transformers>=4.36.0",
+    "accelerate>=0.25.0",
 ]
 
 [project.optional-dependencies]
@@ -59,11 +60,11 @@ dev = [
 illama = "illama_cli.cli:cli"
 
 [project.urls]
-Homepage = "https://github.com/your-org/illama"
-Documentation = "https://github.com/your-org/illama#readme"
-Repository = "https://github.com/your-org/illama"
-Issues = "https://github.com/your-org/illama/issues"
-Changelog = "https://github.com/your-org/illama/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/mkhomutskyi/illama"
+Documentation = "https://github.com/mkhomutskyi/illama#readme"
+Repository = "https://github.com/mkhomutskyi/illama"
+Issues = "https://github.com/mkhomutskyi/illama/issues"
+Changelog = "https://github.com/mkhomutskyi/illama/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 include = ["illama_manager*", "illama_cli*"]

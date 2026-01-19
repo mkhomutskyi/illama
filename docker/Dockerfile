@@ -1,72 +1,61 @@
 # illama-manager Docker image
 # OpenVINO GenAI server for Intel Arc GPUs
 
-# =============================================================================
-# Stage 1: Base with OpenVINO runtime
-# =============================================================================
-FROM ubuntu:24.04 AS base
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
-    python3-pip \
-    python3-venv \
-    curl \
-    wget \
-    git \
-    # Intel GPU support
-    intel-opencl-icd \
-    intel-level-zero-gpu \
-    level-zero \
-    # Build essentials (for some pip packages)
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# =============================================================================
+# Stage 1: Setup Intel Repositories for Arc GPUs (B50/B580/A770/A750)
+# =============================================================================
+RUN apt-get update && apt-get install -y \
+    wget gpg software-properties-common python3-pip python3-venv git curl \
+    && add-apt-repository -y ppa:kobuk-team/intel-graphics \
+    && apt-get update
 
-# Install Intel GPU compute runtime (for Arc support)
-# Note: This may need adjustment based on your Ubuntu version
-RUN wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | \
-    gpg --dearmor -o /usr/share/keyrings/intel-graphics.gpg && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/gpu/ubuntu noble unified" | \
-    tee /etc/apt/sources.list.d/intel-gpu.list && \
-    apt-get update && apt-get install -y --no-install-recommends \
-    intel-opencl-icd \
-    intel-level-zero-gpu \
-    level-zero \
+# =============================================================================
+# Stage 2: Install Intel GPU Drivers & Tools
+# =============================================================================
+RUN apt-get install -y \
+    libze-intel-gpu1 libze1 intel-opencl-icd clinfo \
+    libtbb12 \
     && rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
-# Stage 2: Python dependencies
+# Stage 3: Install Python Dependencies
 # =============================================================================
-FROM base AS deps
-
-WORKDIR /app
-
-# Create virtual environment
-RUN python3 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Using --break-system-packages for Ubuntu 24.04's externally-managed Python
+RUN pip3 install --break-system-packages \
+    # Server framework
+    fastapi \
+    uvicorn[standard] \
+    pydantic \
+    # HuggingFace
+    huggingface_hub \
+    transformers \
+    # OpenVINO (latest versions)
+    openvino==2025.4.1 \
+    openvino-genai==2025.4.1.0 \
+    # Model conversion
+    optimum-intel \
+    optimum \
+    nncf \
+    accelerate \
+    # Required for gpt-oss and some models
+    kernels \
+    triton==3.4
 
 # =============================================================================
-# Stage 3: Application
+# Stage 4: Setup Application
 # =============================================================================
-FROM deps AS app
-
 WORKDIR /app
 
 # Copy application code
 COPY illama_manager/ ./illama_manager/
 COPY pyproject.toml ./
-
-# Install the package
-RUN pip install --no-cache-dir -e .
+COPY requirements.txt ./
 
 # Create data directories
 RUN mkdir -p /data/registry /data/cache /data/logs
@@ -89,4 +78,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:11434/health || exit 1
 
 # Run the server
-CMD ["python", "-m", "illama_manager"]
+CMD ["python3", "-m", "illama_manager"]

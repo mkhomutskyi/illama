@@ -74,9 +74,10 @@ class ChatCompletionRequest(BaseModel):
 
     model: str
     messages: list[ChatMessage]
-    max_tokens: int = Field(default=512, ge=1, le=8192)
+    max_tokens: int = Field(default=4096, ge=1, le=32768)  # Increased for reasoning models
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     stream: bool = False
+    hide_thinking: bool = Field(default=True, description="Hide <think>...</think> content from reasoning models")
 
 
 class ChatCompletionChoice(BaseModel):
@@ -96,7 +97,7 @@ class Usage(BaseModel):
 
 
 class ChatCompletionResponse(BaseModel):
-    """OpenAI Chat completion response."""
+    """OpenAI Chat completion response with illama extensions."""
 
     id: str
     object: str = "chat.completion"
@@ -104,6 +105,12 @@ class ChatCompletionResponse(BaseModel):
     model: str
     choices: list[ChatCompletionChoice]
     usage: Usage
+    # illama extensions (Ollama-style metrics)
+    eval_count: int | None = None  # tokens generated
+    prompt_eval_count: int | None = None  # tokens in prompt
+    eval_duration: int | None = None  # generation time (nanoseconds)
+    total_duration: int | None = None  # total request time (nanoseconds)
+    tokens_per_second: float | None = None  # calculated TPS
 
 
 class ProcessStatus(BaseModel):
@@ -177,14 +184,21 @@ async def chat_completions(request: ChatCompletionRequest) -> Any:
                 media_type="text/event-stream",
             )
         else:
-            # Synchronous generation
-            output = loader.generate(
+            # Synchronous generation with metrics
+            result = loader.generate(
                 model_name=request.model,
                 prompt=prompt,
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
                 stream=False,
             )
+
+            # Get the text output
+            output_text = result.text
+
+            # Filter thinking content if requested
+            if request.hide_thinking:
+                output_text = _filter_thinking_content(output_text)
 
             return ChatCompletionResponse(
                 id=f"chatcmpl-{uuid.uuid4().hex[:8]}",
@@ -193,14 +207,20 @@ async def chat_completions(request: ChatCompletionRequest) -> Any:
                 choices=[
                     ChatCompletionChoice(
                         index=0,
-                        message=ChatMessage(role="assistant", content=output),
+                        message=ChatMessage(role="assistant", content=output_text),
                     )
                 ],
                 usage=Usage(
-                    prompt_tokens=len(prompt.split()),
-                    completion_tokens=len(output.split()),
-                    total_tokens=len(prompt.split()) + len(output.split()),
+                    prompt_tokens=result.prompt_eval_count,
+                    completion_tokens=result.eval_count,
+                    total_tokens=result.prompt_eval_count + result.eval_count,
                 ),
+                # illama extensions
+                eval_count=result.eval_count,
+                prompt_eval_count=result.prompt_eval_count,
+                eval_duration=result.eval_duration_ns,
+                total_duration=result.total_duration_ns,
+                tokens_per_second=round(result.tokens_per_second, 2),
             )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -270,6 +290,22 @@ def _build_prompt(messages: list[ChatMessage]) -> str:
             prompt_parts.append(f"Assistant: {msg.content}")
     prompt_parts.append("Assistant:")
     return "\n".join(prompt_parts)
+
+
+def _filter_thinking_content(text: str) -> str:
+    """Remove <think>...</think> blocks from reasoning model output.
+    
+    Some models (gpt-oss, DeepSeek-R1, etc.) output their reasoning in
+    <think> tags before providing the actual answer.
+    """
+    import re
+    # Remove <think>...</think> blocks (including multiline)
+    filtered = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+    # Also handle unclosed <think> tags (model cut off mid-thinking)
+    filtered = re.sub(r'<think>.*$', '', filtered, flags=re.DOTALL)
+    # Clean up extra whitespace
+    filtered = re.sub(r'\n{3,}', '\n\n', filtered.strip())
+    return filtered
 
 
 @app.get("/ps", response_model=ProcessStatus)

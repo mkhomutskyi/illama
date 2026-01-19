@@ -61,7 +61,32 @@ class ModelRegistry:
                 logger.error(f"Failed to load registry: {e}")
                 self._models = {}
         else:
+            # Auto-discover model folders if index.json doesn't exist
             self._models = {}
+            self._auto_discover_models()
+    
+    def _auto_discover_models(self) -> None:
+        """Auto-discover model folders when index.json is missing."""
+        if not self.registry_dir.exists():
+            return
+        
+        discovered = 0
+        for folder in self.registry_dir.iterdir():
+            if folder.is_dir() and folder.name != "__pycache__":
+                model_name = folder.name
+                self._models[model_name] = ModelInfo(
+                    name=model_name,
+                    hf_repo=model_name,
+                    weight_format="int4",
+                    family="text",
+                    local_path=str(folder),
+                    created_at=datetime.utcnow().isoformat(),
+                )
+                discovered += 1
+        
+        if discovered > 0:
+            logger.info(f"Auto-discovered {discovered} model folders, creating index.json")
+            self._save()
 
     def _save(self) -> None:
         """Save registry to disk."""

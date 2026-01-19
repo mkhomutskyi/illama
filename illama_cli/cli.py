@@ -243,7 +243,7 @@ def ps(ctx):
 @cli.command()
 @click.argument("model")
 @click.argument("prompt", required=False)
-@click.option("--max-tokens", default=512, type=int)
+@click.option("--max-tokens", default=4096, type=int)
 @click.option("--temperature", default=0.7, type=float)
 @click.pass_context
 def run(ctx, model, prompt, max_tokens, temperature):
