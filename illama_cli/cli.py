@@ -245,10 +245,13 @@ def ps(ctx):
 @click.argument("prompt", required=False)
 @click.option("--max-tokens", default=4096, type=int)
 @click.option("--temperature", default=0.7, type=float)
-@click.option("--show-metrics", is_flag=True, help="Show performance metrics (TPS, duration)")
+@click.option("--verbose", "-v", is_flag=True, help="Show performance metrics (TPS, duration)")
 @click.pass_context
-def run(ctx, model, prompt, max_tokens, temperature, show_metrics):
-    """Ensure model loaded, then run a prompt."""
+def run(ctx, model, prompt, max_tokens, temperature, verbose):
+    """Ensure model loaded, then run a prompt.
+    
+    Use -v/--verbose to show performance metrics (disables streaming).
+    """
     client = ctx.obj["client"]
 
     if not prompt:
@@ -263,7 +266,7 @@ def run(ctx, model, prompt, max_tokens, temperature, show_metrics):
                 break
 
             try:
-                if show_metrics:
+                if verbose:
                     # Non-streaming with metrics
                     response = client.chat_with_metrics(
                         model=model,
@@ -291,7 +294,7 @@ def run(ctx, model, prompt, max_tokens, temperature, show_metrics):
     else:
         # Single prompt mode
         try:
-            if show_metrics:
+            if verbose:
                 # Non-streaming with metrics
                 response = client.chat_with_metrics(
                     model=model,
